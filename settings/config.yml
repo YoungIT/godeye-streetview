@@ -1,0 +1,6 @@
+overpass:
+  highway: 123,456
+
+images:
+  endpoint : images/
+  resolution: 123
