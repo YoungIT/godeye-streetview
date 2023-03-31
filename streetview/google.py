@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+"""
+:Module: ``streetview``
+:Author: `Adrian Letchford <http://www.dradrian.com>`_
+:Organisation: `Warwick Business School <http://www.wbs.ac.uk/>`_, `University of Warwick <http://www.warwick.ac.uk/>`_.
+
+
+This is a light module for downloading photos from Google street view. The
+functions allow you to retrieve current and **old** photos.
+
+The photos on Google street view are panoramas and are refered to as such.
+However, you have the option of downloading flat photos, or panoramas.
+
+Retrieving photos is a two step process. First, you must translate GPS
+coordinates into panorama ids. The following code retrieves a list of
+the closest panoramas giving you their id and date:
+"""
+
+import re, math, os, json, requests, itertools, time, shutil
+from random import choice
+
 class urls:
     chars = "abcdefghijklmnopqrstuvwxyz0123456789"
     def _build_tile_url(pano_id, zoom=3, x=0, y=0):
@@ -77,89 +98,6 @@ class metadata:
         
         return raw_md
 
-def panoids(lat, lon, closest=False, disp=False, proxies=None, resp=None):
-    """
-    Gets the closest panoramas (ids) to the GPS coordinates.
-    If the 'closest' boolean parameter is set to true, only the closest panorama
-    will be gotten (at all the available dates)
-    """
-    resp = _panoids_data(lat, lon)
-
-    # Get all the panorama ids and coordinates
-    # I think the latest panorama should be the first one. And the previous
-    # successive ones ought to be in reverse order from bottom to top. The final
-    # images don't seem to correspond to a particular year. So if there is one
-    # image per year I expect them to be orded like:
-    # 2015
-    # XXXX
-    # XXXX
-    # 2012
-    # 2013
-    # 2014
-    pans = re.findall('\[2,"(.+?)"\].+?'
-                      '\[\[null,null,(-?[0-9]+.[0-9]+),(-?[0-9]+.[0-9]+)\],'
-                      '\[-?[0-9]+.[0-9]+\],\[(-?[0-9]+.[0-9]+),(-?[0-9]+.[0-9]+),(-?[0-9]+.[0-9]+)', resp.text)
-    pans = [{
-        "panoid": p[0],
-        "lat": float(p[1]),
-        "lon": float(p[2]),
-        "heading": float(p[3]),
-        "tilt": float(p[4]),
-        "roll": float(p[5])} for p in pans]  # Convert to floats
-
-    # Remove duplicate panoramas
-    pans = [p for i, p in enumerate(pans) if p not in pans[:i]]
-
-    if disp:
-        for pan in pans:
-            print(pan)
-
-    # Get all the dates
-    # The dates seem to be at the end of the file. They have a strange format but
-    # are in the same order as the panoids except that the latest date is last
-    # instead of first.
-    dates = re.findall('([0-9]?[0-9]?[0-9])?,?\[(20[0-9][0-9]),([0-9]+)\]', resp.text)
-    dates = [list(d)[1:] for d in dates]  # Convert to lists and drop the index
-
-    if len(dates) > 0:
-        # Convert all values to integers
-        dates = [[int(v) for v in d] for d in dates]
-
-        # Make sure the month value is between 1-12
-        dates = [d for d in dates if d[1] <= 12 and d[1] >= 1]
-
-        # The last date belongs to the first panorama
-        year, month = dates.pop(-1)
-        pans[0].update({'year': year, "month": month})
-
-        # The dates then apply in reverse order to the bottom panoramas
-        dates.reverse()
-        for i, (year, month) in enumerate(dates):
-            pans[-1-i].update({'year': year, "month": month})
-
-    # # Make the first value of the dates the index
-    # if len(dates) > 0 and dates[-1][0] == '':
-    #     dates[-1][0] = '0'
-    # dates = [[int(v) for v in d] for d in dates]  # Convert all values to integers
-    #
-    # # Merge the dates into the panorama dictionaries
-    # for i, year, month in dates:
-    #     pans[i].update({'year': year, "month": month})
-
-    # Sort the pans array
-    def func(x):
-        if 'year'in x:
-            return datetime(year=x['year'], month=x['month'], day=1)
-        else:
-            return datetime(year=3000, month=1, day=1)
-        
-    pans.sort(key=func)
-
-    if closest:
-        return [pans[i] for i in range(len(dates))]
-    else:
-        return pans
-
 def panoids_from_response(text, closest=False, disp=False, proxies=None):
     """
     Gets panoids from response (gotting asynchronously)
@@ -234,9 +172,9 @@ def panoids_from_response(text, closest=False, disp=False, proxies=None):
     else:
         return pans
     
-def _build_tile_arr(panoid = None, zoom=3, alternate=False):
+def _build_tile_arr(panoid = None, zoom=4, alternate=False):
 
-    coord = list(itertools.product(range(imgx), range(13)))
+    coord = list(itertools.product(range(16), range(6)))
 
     if alternate:
         image_url = 'https://lh3.ggpht.com/p/{}=x{}-y{}-z{}'

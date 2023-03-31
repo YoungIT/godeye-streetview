@@ -14,15 +14,6 @@ However, you have the option of downloading flat photos, or panoramas.
 Retrieving photos is a two step process. First, you must translate GPS
 coordinates into panorama ids. The following code retrieves a list of
 the closest panoramas giving you their id and date:
-
->>> import streetview
->>> panoids = streetview.panoids(lat, lon)
-
-You can then use the panorama ids to download photos with the following
-function:
-
->>> streetview.api_download(panoid, heading, flat_dir, key)
-
 """
 
 import re, math, os, json, requests, itertools, time, shutil
@@ -41,7 +32,7 @@ from . import google
 from . import base
 
 overpass_api = overpy.Overpass()
-class scraper:
+class overpass_route:
 
     """_summary_
     """
@@ -88,15 +79,25 @@ class scraper:
                 break
                 
         return waypoint
+class scraper:
+
+    PanoQueue = base.PanoQueue()
+
+    def get_metadata() -> base.MetadataStructure:
+
+        return metadata
+
+    def list_pano_id(lat, lon, radius):
+
+        op = overpass_route(lat, lon, radius)
+
+        for lat, lon in op.get_coord_around():
+
+            pano_id = google.metadata._get_panoid_from_coord(lat, lon)
+
+            md = google._build_tile_arr()
+
+            md = scraper.get_metadata()
+
     
-    def downloads_images(self) -> list:
-
-        pano_list = []
-
-        for lat, lon in self.get_coord_around():
-
-            pano_list.append(google.metadata._get_panoid_from_coord(lat, lon))
-
-            
-
-        return list 
+    
