@@ -82,6 +82,7 @@ class metadata:
                 
                 # logger.debug(data)
                 pano = data[0][0]
+
         except TypeError:
 
             print("ERROR")

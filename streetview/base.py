@@ -5,11 +5,11 @@ from . import google
 class MetadataStructure:
     dict_instance = []
     
-    def __init__(self, pano_id=None, lat=None, lng=None, date=None, size=None, max_zoom=None, misc={}, timeline={}, linked_panos={}):
+    def __init__(self, pano_id=None, lat=None, lng=None, street_name=None, size=None, max_zoom=None,timeline=[]):
         self.pano_id = pano_id
         self.lat = lat
         self.lng = lng
-        self.date = date
+        self.street_name = street_name
         self.size = size
         self.max_zoom = max_zoom
         self.timeline = timeline
@@ -21,7 +21,7 @@ class MetadataStructure:
                 f"pano_id={self.pano_id}, "
                 f"lat={self.lat}, "
                 f"lng={self.lng}, "
-                f"date={self.date}, "
+                f"street_name={self.street_name}, "
                 f"size={self.size}, "
                 f"max_zoom={self.max_zoom}, "
                 f"timeline={self.timeline}, "
@@ -47,7 +47,6 @@ class PanoQueue:
 
     def dequeue(self):
         return self._elements.popleft()
-        
 class OverpassTooManyRequest(Exception):
 
     message = "Overpass Too Many Requests"
@@ -55,3 +54,7 @@ class OverpassTooManyRequest(Exception):
 class OverPassGatewayTimeout(Exception):
 
     message = "Overpass 504 Gateway Timeout"
+
+class PanoIDInvalid(Exception):
+
+    message = "Pano ID is not available"
