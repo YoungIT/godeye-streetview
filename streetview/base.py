@@ -35,17 +35,17 @@ class MetadataStructure:
             return instance.__dict__
         
 class ProcessQueue:
-    #Cut con me ra khoi day di thang moi den
-    #Tao khong choi gay dau
+
     def __init__(self, num_processes=1):
         self.num_processes = num_processes
 
-    def process_queue(self, process_fn, items, *args):
+    def process_queue(self, process_fn, objects, *args):
         pool = multiprocessing.Pool(self.num_processes)
-        results = pool.starmap(process_fn, [(item,) + args for item in items])
+        results = pool.starmap(process_fn, [(obj,) + args for obj in objects])
         pool.close()
         pool.join()
         return results
+
 class OverpassTooManyRequest(Exception):
 
     message = "Overpass Too Many Requests"

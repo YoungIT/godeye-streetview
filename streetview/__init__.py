@@ -159,29 +159,28 @@ class scraper:
 
         op = overpass_route(lat, lon, radius)
 
-        items = []
+        objects = []
 
-
-        obj = {
-                "pano_id" : None,
-                "lat": lat,
-                "lng": lng,
-                "size":None, 
-                "max_zoom":None,
-            }
-        args = [(list(obj.values()))]
+        # obj = {
+        #         "pano_id" : None,
+        #         "lat": lat,
+        #         "lng": lng,
+        #         "size":None, 
+        #         "max_zoom":None,
+        #     }
+        # args = [(list(obj.values()))]
 
         for lat, lng in op.get_coord_around():
 
-            items.append(scraper.PanoQueue.enqueue({
+            objects.append({
                 "pano_id" : None,
                 "lat": lat,
                 "lng": lng,
                 "size":None, 
                 "max_zoom":None,
-            }))
+            })
 
-        results = scraper._queue.process_queue(scraper.get_metadata, items)
+        results = scraper._queue.process_queue(scraper.get_metadata, objects)
 
         logger.success("Success in process Queue")
 
