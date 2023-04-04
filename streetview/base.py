@@ -1,4 +1,4 @@
-from collections import deque
+import multiprocessing
 
 from . import google
 
@@ -23,6 +23,7 @@ class MetadataStructure:
                 f"lat={self.lat}, "
                 f"lng={self.lng}, "
                 f"street_name={self.street_name}, "
+                f"date={self.date}, "
                 f"size={self.size}, "
                 f"max_zoom={self.max_zoom}, "
                 f"timeline={self.timeline}, "
@@ -32,22 +33,19 @@ class MetadataStructure:
     def dict(cls):
         for instance in cls.dict_instance:
             return instance.__dict__
-class PanoQueue:
-    def __init__(self, *elements):
-        self._elements = deque(elements)
+        
+class ProcessQueue:
+    #Cut con me ra khoi day di thang moi den
+    #Tao khong choi gay dau
+    def __init__(self, num_processes=1):
+        self.num_processes = num_processes
 
-    def __len__(self):
-        return len(self._elements)
-
-    def __iter__(self):
-        while len(self) > 0:
-            yield self.dequeue()
-
-    def enqueue(self, element):
-        self._elements.append(element)
-
-    def dequeue(self):
-        return self._elements.popleft()
+    def process_queue(self, process_fn, items, *args):
+        pool = multiprocessing.Pool(self.num_processes)
+        results = pool.starmap(process_fn, [(item,) + args for item in items])
+        pool.close()
+        pool.join()
+        return results
 class OverpassTooManyRequest(Exception):
 
     message = "Overpass Too Many Requests"
@@ -59,3 +57,7 @@ class OverPassGatewayTimeout(Exception):
 class PanoIDInvalid(Exception):
 
     message = "Pano ID is not available"
+
+class BuildMetadataUrlFail(Exception):
+
+    message = "Cannot Build Metadata Url due to - {Exception}"

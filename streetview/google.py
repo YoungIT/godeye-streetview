@@ -21,6 +21,11 @@ from random import choice
 
 from loguru import logger
 
+from . import (
+    base
+)
+
+import utils
 class urls:
     chars = "abcdefghijklmnopqrstuvwxyz0123456789"
     def _build_tile_url(pano_id, zoom=3, x=0, y=0):
@@ -65,43 +70,47 @@ class geo:
     
 class metadata:
 
-    def _get_panoid_from_coord(lat, lng, radius=500) -> dict:
+    def _get_panoid_from_coord(lat, lng, radius=500) -> str:
 
         """
         Returns closest Google panorama ID to given parsed coordinates.
         """
         try:
             url = urls._build_metadata_url(lat=lat, lng=lng, mode="SingleImageSearch", radius=radius)
-            json = requests.get(url).text
-            if "Search returned no images." in json:
-                print("[google]: Finding nearest panorama via satellite zoom...")
+            r = requests.get(url).text
+
+            if "Search returned no images." in r:
+                logger.info("[google]: Finding nearest panorama via satellite zoom...")
                 url = urls._build_metadata_url(lat=lat, lng=lng, mode="SatelliteZoom")
-                json = requests.get(url).text
-                data = json.loads(json[4:])
+                r = requests.get(url).text
+                data = json.loads(r[4:])
                 pano = data[1][1][0][0][0][1]
             else:
-                data = re.findall(r'\[[0-9],"(.+?)"].+?,\[\[null,null,(.+?),(.+?)\]', json)
-                
-                # logger.debug(data)
+                data = re.findall(r'\[[0-9],"(.+?)"].+?,\[\[null,null,(.+?),(.+?)\]', r)
                 pano = data[0][0]
 
-        except TypeError:
+            return pano
 
-            print("ERROR")
-            
-        return pano
-    
+        except TypeError as Error:
+
+            logger.error(f"Type Error - {Error}")
+
+    @utils.retry(base.BuildMetadataUrlFail, delay=5, tries=3)
     def _get_raw_metadata(pano_id) -> dict:
         """
         Returns panorama ID metadata.
         """
-
-        logger.debug("pano id ",pano_id)
-        url = urls._build_metadata_url(pano_id=pano_id, mode="GetMetadata")
-        data = str(requests.get(url).content)[38:-3].replace("\\", "\\\\")
         
-        logger.debug(json.loads(data))
-        return json.loads(data)
+        try:
+            url = urls._build_metadata_url(pano_id=pano_id, mode="GetMetadata")
+            response = str(requests.get(url))[38:-3].replace("\\", "\\\\")
+            data = json.loads(response)
+        
+        except Exception as Error:
+
+            raise base.BuildMetadataUrlFail(Error)
+
+        return data
 
 def panoids_from_response(text, closest=False, disp=False, proxies=None):
     """

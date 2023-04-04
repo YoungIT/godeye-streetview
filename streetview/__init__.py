@@ -89,10 +89,10 @@ class scraper:
         _type_: _description_
     """
 
-    PanoQueue = base.PanoQueue()
+    _queue = base.ProcessQueue(num_processes=4)
     _convert_date = lambda raw_date : datetime.strptime(raw_date, "%Y/%m")
 
-    def get_metadata(pano_id=None, lat=None, lng=None, date=None, size=None, max_zoom=None,timeline=[]) -> base.MetadataStructure:
+    def get_metadata(**kwargs) -> base.MetadataStructure:
 
         """_summary_
 
@@ -100,18 +100,17 @@ class scraper:
             _type_: _description_
         """
 
+        pano_id = kwargs.get(pano_id)
+        lat, lng = kwargs.get(lat), kwargs.get(lng)
+
         if pano_id == None:
-            pano_id = google.metadata._get_panoid_from_coord(lat, lon)
+            pano_id = google.metadata._get_panoid_from_coord(lat, lng, 100)
         elif type(pano_id) is list:
             pano_id = pano_id[0]
-
-        logger.debug("panoid", pano_id) 
 
         raw_md = google.metadata._get_raw_metadata(pano_id)
 
         pano_timeline = list() # List for store all PanoID and it's historical Iamges
-
-        logger.debug(raw_md)
 
         try:
             lat, lng = raw_md[1][0][5][0][1][0][2], raw_md[1][0][5][0][1][0][3] 
@@ -119,29 +118,32 @@ class scraper:
             image_size = raw_md[1][0][2][2][0] # obtains highest resolution
             image_avail_res = raw_md[1][0][2][3] # obtains all resolutions available
             raw_image_date = raw_md[1][0][6][-1] # [0] for year - [1] for month
-            raw_image_date = metadata._convert_date(f"{raw_image_date[0]}/{raw_image_date[1]}")
+            raw_image_date = scraper._convert_date(f"{raw_image_date[0]}/{raw_image_date[1]}")
 
             linked_panos = raw_md[1][0][5][0][3][0]
 
-            for pano_info in raw[1][0][5][0][8]:
+            for pano_info in raw_md[1][0][5][0][8]:
                 raw_pano_info = linked_panos[pano_info[0]]
 
                 pano_timeline.append({
                     "pano_id": raw_pano_info[0][1],
                     "lat": raw_pano_info[2][0][-2],
                     "lng": raw_pano_info[2][0][-1],
-                    "date":metadata._convert_date(f"{pano_info[1][0]}/{pano_info[1][1]}")
+                    "date": scraper._convert_date(f"{pano_info[1][0]}/{pano_info[1][1]}")
                 })
         except IndexError:
             raise base.PanoIDInvalid
+
+        logger.debug(f"datetime {raw_image_date}")
 
         metadata = base.MetadataStructure(
             pano_id=pano_id, 
             lat=lat, 
             lng=lng, 
-            data=raw_image_date,
-            size=size, 
-            max_zoom=max_zoom,
+            street_name = street_name,
+            date=raw_image_date,
+            size=[image_avail_res[0], image_avail_res[1]],
+            max_zoom=len(image_avail_res[0])-1,
             timeline=pano_timeline
         )
 
@@ -157,16 +159,33 @@ class scraper:
 
         op = overpass_route(lat, lon, radius)
 
-        for lat, lon in op.get_coord_around():
+        items = []
 
-            md = scraper.get_metadata(lat, lon)
 
-            logger.debug(md)
-            break
+        obj = {
+                "pano_id" : None,
+                "lat": lat,
+                "lng": lng,
+                "size":None, 
+                "max_zoom":None,
+            }
+        args = [(list(obj.values()))]
 
-            # _build_arr = google._build_tile_arr(pano_id)
+        for lat, lng in op.get_coord_around():
 
-            # logger.debug(_build_arr)
+            items.append(scraper.PanoQueue.enqueue({
+                "pano_id" : None,
+                "lat": lat,
+                "lng": lng,
+                "size":None, 
+                "max_zoom":None,
+            }))
+
+        results = scraper._queue.process_queue(scraper.get_metadata, items)
+
+        logger.success("Success in process Queue")
+
+        logger.info(scraper.PanoQueue.dequeue)
 
     def image_downloader(images_year = "last"):
 
@@ -174,11 +193,14 @@ class scraper:
 
             pass
 
+
+# a= google.metadata._get_panoid_from_coord(48.858623, 2.2926242, 100)
+# logger.debug(a)
+
 scraper.list_pano_id(48.858623, 2.2926242, 100)
-
 # op = overpass_route(48.858623, 2.2926242, 100)
-# a = op.query_craft()
 
+# google.metadata._get_raw_metadata("test")
 # logger.debug(a)
 
 
