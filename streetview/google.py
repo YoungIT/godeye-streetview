@@ -19,6 +19,8 @@ the closest panoramas giving you their id and date:
 import re, math, os, json, requests, itertools, time, shutil
 from random import choice
 
+from loguru import logger
+
 class urls:
     chars = "abcdefghijklmnopqrstuvwxyz0123456789"
     def _build_tile_url(pano_id, zoom=3, x=0, y=0):
@@ -93,11 +95,13 @@ class metadata:
         """
         Returns panorama ID metadata.
         """
+
+        logger.debug("pano id ",pano_id)
         url = urls._build_metadata_url(pano_id=pano_id, mode="GetMetadata")
         data = str(requests.get(url).content)[38:-3].replace("\\", "\\\\")
-        raw_md = json.loads(data)
         
-        return raw_md
+        logger.debug(json.loads(data))
+        return json.loads(data)
 
 def panoids_from_response(text, closest=False, disp=False, proxies=None):
     """

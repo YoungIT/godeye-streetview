@@ -5,11 +5,12 @@ from . import google
 class MetadataStructure:
     dict_instance = []
     
-    def __init__(self, pano_id=None, lat=None, lng=None, street_name=None, size=None, max_zoom=None,timeline=[]):
+    def __init__(self, pano_id=None, lat=None, lng=None, street_name=None, date=None, size=None, max_zoom=None,timeline=[]):
         self.pano_id = pano_id
         self.lat = lat
         self.lng = lng
-        self.street_name = street_name
+        self.street_name = street_name,
+        self.date = date, 
         self.size = size
         self.max_zoom = max_zoom
         self.timeline = timeline
