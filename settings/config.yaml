@@ -3,5 +3,7 @@ overpass:
     highway : way(around:{radius},{latitude},{longitude})[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential| motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|pedestrian)$"]; out;
 
 images:
-  endpoint : images/
-  resolution: 123
+  local_storage : True
+
+worker:
+  max_thread: 5

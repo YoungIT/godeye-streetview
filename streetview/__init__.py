@@ -17,11 +17,11 @@ the closest panoramas giving you their id and date:
 """
 
 import re, math, os, json, requests, itertools, time, shutil
-from multiprocessing.pool import Pool
 from datetime import datetime
 from PIL import Image
 from io import BytesIO
 from random import choice
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import overpy
@@ -34,10 +34,9 @@ from . import (
     google,
     base
 )
-from . import google
-from . import base
 
 overpass_api = overpy.Overpass()
+
 class overpass_route:
 
     """_summary_
@@ -91,6 +90,7 @@ class scraper:
     """
 
     _convert_date = lambda raw_date : datetime.strptime(raw_date, "%Y/%m")
+    multi_thread = MultiThread(max_workers=settings.config.worker.max_thread)
 
     def get_metadata(**kwargs) -> base.MetadataStructure:
 
@@ -100,13 +100,13 @@ class scraper:
             _type_: _description_
         """
 
-        pano_id = kwargs.get('pano_id')
-        lat = kwargs.get('lat')
-        lng = kwargs.get('lng')
+        pano_id = kwargs.get(pano_id)
+        lat, lng = kwargs.get(lat), kwargs.get(lng)
 
-        logger.debug(f"read metadata.pano_id {lat, lng}")
-
-        pano_id = google.metadata._get_panoid_from_coord(lat, lng, 100)
+        if pano_id == None:
+            pano_id = google.metadata._get_panoid_from_coord(lat, lng, 100)
+        elif type(pano_id) is list:
+            pano_id = pano_id[0]
 
         raw_md = google.metadata._get_raw_metadata(pano_id)
 
@@ -133,6 +133,8 @@ class scraper:
                 })
         except IndexError:
             raise base.PanoIDInvalid
+
+        logger.debug(f"datetime {raw_image_date}")
 
         metadata = base.MetadataStructure(
             pano_id=pano_id, 
@@ -171,28 +173,38 @@ class scraper:
 
             break
 
-        _list_objects = [scraper.get_metadata(**obj) for obj in objects]
+        logger.success("Success in process Queue")
 
-        # with Pool() as pool:
+        return [scraper.get_metadata(**obj) for obj in objects]
 
-        #     items = [(obj,) for obj in objects]
+    def save_image(url, local_storage=settings.config.images.local_storage, storage_path="images/"):
 
-        #     logger.debug(items)
+        response = requests.get(url)
+        img_data = response.content
+        img_name = url.split('/')[-1]
 
-        #     for result in pool.starmap(scraper.get_metadata, items):
-
-        #         logger.debug(f"result {result}")
-
-        logger.success("Success")
-
-        return _list_objects
-
-    def image_downloader(get_timeline = False):
-
-        if get_timeline:
-            pass
+        if local_storage:
+        os.makedirs(storage_path, exist_ok=True)
+            with open(os.path.join(storage_path, img_name), 'wb') as f:
+                f.write(img_data)
         else:
-            
+
+            # function for saving images to another storages will be place here
+            print(img_data)
+
+    def image_downloader(lat, lon, radius, get_timeline = False):
+
+        for link scraper.list_pano_id(lat, lon, radius)
+
+        with ThreadPoolExecutor(max_workers=settings.config.worker.max_thread) as executor:
+            for i, url in enumerate(urls):
+                filename = f'image{i}.jpg'
+                executor.submit(download_image, url, filename)   
+        
+        if images_year == "last":
+
+            pass
+
 
 # a= google.metadata._get_panoid_from_coord(48.858623, 2.2926242, 100)
 # logger.debug(a)

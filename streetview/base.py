@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from . import google
 
 class MetadataStructure:
@@ -31,6 +32,28 @@ class MetadataStructure:
     def dict(cls):
         for instance in cls.dict_instance:
             return instance.__dict__
+
+class MultiThread:
+    def __init__(self, max_workers=1):
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+
+    def get_image(self, url, filename):
+        response = requests.get(url)
+        with open(filename, 'wb') as f:
+            f.write(response.content)
+
+    def download_images(self, urls):
+        futures = []
+        for i, url in enumerate(urls):
+            filename = f'image{i}.jpg'
+            future = self.executor.submit(self.download_image, url, filename)
+            futures.append(future)
+        return futures
+
+    def execute_task(self, task_fn, *args, **kwargs):
+        future = self.executor.submit(task_fn, *args, **kwargs)
+        return future
+            
 class OverpassTooManyRequest(Exception):
 
     message = "Overpass Too Many Requests"
