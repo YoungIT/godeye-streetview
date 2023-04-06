@@ -103,7 +103,7 @@ class metadata:
         
         try:
             url = urls._build_metadata_url(pano_id=pano_id, mode="GetMetadata")
-            response = str(requests.get(url))[38:-3].replace("\\", "\\\\")
+            response = str(requests.get(url).content)[38:-3].replace("\\", "\\\\")
             data = json.loads(response)
         
         except Exception as Error:

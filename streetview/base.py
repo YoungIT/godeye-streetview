@@ -1,5 +1,3 @@
-import multiprocessing
-
 from . import google
 
 class MetadataStructure:
@@ -33,19 +31,6 @@ class MetadataStructure:
     def dict(cls):
         for instance in cls.dict_instance:
             return instance.__dict__
-        
-class ProcessQueue:
-
-    def __init__(self, num_processes=1):
-        self.num_processes = num_processes
-
-    def process_queue(self, process_fn, objects, *args):
-        pool = multiprocessing.Pool(self.num_processes)
-        results = pool.starmap(process_fn, [(obj,) + args for obj in objects])
-        pool.close()
-        pool.join()
-        return results
-
 class OverpassTooManyRequest(Exception):
 
     message = "Overpass Too Many Requests"

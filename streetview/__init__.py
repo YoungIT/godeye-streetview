@@ -17,6 +17,7 @@ the closest panoramas giving you their id and date:
 """
 
 import re, math, os, json, requests, itertools, time, shutil
+from multiprocessing.pool import Pool
 from datetime import datetime
 from PIL import Image
 from io import BytesIO
@@ -89,7 +90,6 @@ class scraper:
         _type_: _description_
     """
 
-    _queue = base.ProcessQueue(num_processes=4)
     _convert_date = lambda raw_date : datetime.strptime(raw_date, "%Y/%m")
 
     def get_metadata(**kwargs) -> base.MetadataStructure:
@@ -100,13 +100,13 @@ class scraper:
             _type_: _description_
         """
 
-        pano_id = kwargs.get(pano_id)
-        lat, lng = kwargs.get(lat), kwargs.get(lng)
+        pano_id = kwargs.get('pano_id')
+        lat = kwargs.get('lat')
+        lng = kwargs.get('lng')
 
-        if pano_id == None:
-            pano_id = google.metadata._get_panoid_from_coord(lat, lng, 100)
-        elif type(pano_id) is list:
-            pano_id = pano_id[0]
+        logger.debug(f"read metadata.pano_id {lat, lng}")
+
+        pano_id = google.metadata._get_panoid_from_coord(lat, lng, 100)
 
         raw_md = google.metadata._get_raw_metadata(pano_id)
 
@@ -134,8 +134,6 @@ class scraper:
         except IndexError:
             raise base.PanoIDInvalid
 
-        logger.debug(f"datetime {raw_image_date}")
-
         metadata = base.MetadataStructure(
             pano_id=pano_id, 
             lat=lat, 
@@ -161,15 +159,6 @@ class scraper:
 
         objects = []
 
-        # obj = {
-        #         "pano_id" : None,
-        #         "lat": lat,
-        #         "lng": lng,
-        #         "size":None, 
-        #         "max_zoom":None,
-        #     }
-        # args = [(list(obj.values()))]
-
         for lat, lng in op.get_coord_around():
 
             objects.append({
@@ -177,21 +166,33 @@ class scraper:
                 "lat": lat,
                 "lng": lng,
                 "size":None, 
-                "max_zoom":None,
+                "max_zoom":None
             })
 
-        results = scraper._queue.process_queue(scraper.get_metadata, objects)
+            break
 
-        logger.success("Success in process Queue")
+        _list_objects = [scraper.get_metadata(**obj) for obj in objects]
 
-        logger.info(scraper.PanoQueue.dequeue)
+        # with Pool() as pool:
 
-    def image_downloader(images_year = "last"):
+        #     items = [(obj,) for obj in objects]
 
-        if images_year == "last":
+        #     logger.debug(items)
 
+        #     for result in pool.starmap(scraper.get_metadata, items):
+
+        #         logger.debug(f"result {result}")
+
+        logger.success("Success")
+
+        return _list_objects
+
+    def image_downloader(get_timeline = False):
+
+        if get_timeline:
             pass
-
+        else:
+            
 
 # a= google.metadata._get_panoid_from_coord(48.858623, 2.2926242, 100)
 # logger.debug(a)
