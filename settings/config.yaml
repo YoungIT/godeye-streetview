@@ -6,4 +6,4 @@ images:
   local_storage : True
 
 worker:
-  max_thread: 5
+  max_thread: 20
