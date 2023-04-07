@@ -17,6 +17,8 @@ the closest panoramas giving you their id and date:
 """
 
 import re, math, os, json, requests, itertools, time, shutil
+
+from datetime import datetime
 from random import choice
 
 from loguru import logger
@@ -26,6 +28,7 @@ from . import (
 )
 
 import utils
+
 class urls:
     chars = "abcdefghijklmnopqrstuvwxyz0123456789"
     def _build_tile_url(pano_id, zoom=3, x=0, y=0):
@@ -186,17 +189,18 @@ def panoids_from_response(text, closest=False, disp=False, proxies=None):
     else:
         return pans
     
-def _build_tile_arr(panoid = None, zoom=4, alternate=False):
+def _build_tile_arr(panoid = None, date =None, zoom=4, alternate=False):
 
     coord = list(itertools.product(range(16), range(6)))
+    _date = date.strftime("%m_%Y")
 
     if alternate:
         image_url = 'https://lh3.ggpht.com/p/{}=x{}-y{}-z{}'
-        tiles = [(x, y, "%s_%dx%d.jpg" % (panoid, x, y), image_url.format(panoid, x, y, zoom)) for x, y in coord]
+        tiles = [(_date, "%s_%dx%dy" % (panoid, x, y), image_url.format(panoid, x, y, zoom)) for x, y in coord]
     else:
         image_url = 'https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=maps_sv.tactile&panoid={}&zoom={}&x={}&y={}'
-        tiles = [(x, y, "%s_%dx%d.jpg" % (panoid, x, y), image_url.format(panoid, zoom, x, y)) for x, y in coord]
-    
+        tiles = [(_date, "%s_%dx%dy" % (panoid, x, y), image_url.format(panoid, zoom, x, y)) for x, y in coord]
+
     return tiles
 
 def download_tiles(tiles, directory, disp=False):
