@@ -35,6 +35,8 @@ from . import (
     base
 )
 
+import utils
+
 overpass_api = overpy.Overpass()
 
 class overpass_route:
@@ -90,7 +92,7 @@ class scraper:
     """
 
     _convert_date = lambda raw_date : datetime.strptime(raw_date, "%Y/%m")
-    multi_thread = MultiThread(max_workers=settings.config.worker.max_thread)
+    multi_thread = base.MultiThread(max_workers=settings.config.worker.max_thread)
 
     def get_metadata(**kwargs) -> base.MetadataStructure:
 
@@ -100,8 +102,8 @@ class scraper:
             _type_: _description_
         """
 
-        pano_id = kwargs.get(pano_id)
-        lat, lng = kwargs.get(lat), kwargs.get(lng)
+        pano_id = kwargs.get("pano_id")
+        lat, lng = kwargs.get("lat"), kwargs.get("lng")
 
         if pano_id == None:
             pano_id = google.metadata._get_panoid_from_coord(lat, lng, 100)
@@ -134,14 +136,12 @@ class scraper:
         except IndexError:
             raise base.PanoIDInvalid
 
-        logger.debug(f"datetime {raw_image_date}")
-
         metadata = base.MetadataStructure(
             pano_id=pano_id, 
             lat=lat, 
             lng=lng, 
             street_name = street_name,
-            date=raw_image_date,
+            date= raw_image_date,
             size=[image_avail_res[0], image_avail_res[1]],
             max_zoom=len(image_avail_res[0])-1,
             timeline=pano_timeline
@@ -173,43 +173,65 @@ class scraper:
 
             break
 
-        logger.success("Success in process Queue")
-
         return [scraper.get_metadata(**obj) for obj in objects]
 
-    def save_image(url, local_storage=settings.config.images.local_storage, storage_path="images/"):
+    @utils.retry(base.BuildMetadataUrlFail, delay=5, tries=3)
+    def save_image(url, filename, local_storage=settings.config.images.local_storage, storage_path="images/"):
 
-        response = requests.get(url)
-        img_data = response.content
-        img_name = url.split('/')[-1]
+        try:
+            response = requests.get(url)
+            img_data = response.content
 
-        if local_storage:
-        os.makedirs(storage_path, exist_ok=True)
-            with open(os.path.join(storage_path, img_name), 'wb') as f:
-                f.write(img_data)
-        else:
+            if local_storage == True:
+                os.makedirs(storage_path, exist_ok=True)
+                with open(os.path.join(storage_path, filename), 'wb') as f:
+                    f.write(img_data)
 
-            # function for saving images to another storages will be place here
-            print(img_data)
+            else:
+                # function for saving images to another storages will be place here
+                # function do_something()
+
+                pass
+
+        except Exception as Error:
+
+            raise base.BuildMetadataUrlFail(Error)
 
     def image_downloader(lat, lon, radius, get_timeline = False):
-
-        for link scraper.list_pano_id(lat, lon, radius)
-
-        with ThreadPoolExecutor(max_workers=settings.config.worker.max_thread) as executor:
-            for i, url in enumerate(urls):
-                filename = f'image{i}.jpg'
-                executor.submit(download_image, url, filename)   
         
-        if images_year == "last":
+        futures = []
+        images_md = scraper.list_pano_id(lat, lon, radius)
 
-            pass
+        for md in images_md:
 
+            url_lists = google._build_tile_arr(md.pano_id, md.date[0])
+
+            if get_timeline:
+
+                for history_pano in md.timeline:
+
+                    logger.debug(history_pano["pano_id"], history_pano["date"])
+
+                    for tile in google._build_tile_arr(history_pano["pano_id"], history_pano["date"]):
+
+                        url_lists.append(tile)
+
+            for url in url_lists:
+                pano_date, pano_id, pano_url = url[0], url[1], url[2]
+
+                filename = f'{pano_id}--{pano_date}.jpg'
+                future = scraper.multi_thread.execute_task(scraper.save_image, pano_url, filename)
+                    
+                futures.append(future)
+            break
+
+        for result in scraper.multi_thread.wait_for_all(futures):
+            logger.debug(f'Download success')
 
 # a= google.metadata._get_panoid_from_coord(48.858623, 2.2926242, 100)
 # logger.debug(a)
 
-scraper.list_pano_id(48.858623, 2.2926242, 100)
+scraper.image_downloader(48.858623, 2.2926242, 100)
 # op = overpass_route(48.858623, 2.2926242, 100)
 
 # google.metadata._get_raw_metadata("test")
