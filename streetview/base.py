@@ -37,22 +37,14 @@ class MultiThread:
     def __init__(self, max_workers=1):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
-    def get_image(self, url, filename):
-        response = requests.get(url)
-        with open(filename, 'wb') as f:
-            f.write(response.content)
-
-    def download_images(self, urls):
-        futures = []
-        for i, url in enumerate(urls):
-            filename = f'image{i}.jpg'
-            future = self.executor.submit(self.download_image, url, filename)
-            futures.append(future)
-        return futures
-
     def execute_task(self, task_fn, *args, **kwargs):
         future = self.executor.submit(task_fn, *args, **kwargs)
         return future
+
+    def wait_for_all(self, futures):
+        for future in as_completed(futures):
+            result = future.result()
+            yield result
             
 class OverpassTooManyRequest(Exception):
 
@@ -69,3 +61,7 @@ class PanoIDInvalid(Exception):
 class BuildMetadataUrlFail(Exception):
 
     message = "Cannot Build Metadata Url due to - {Exception}"
+
+class URLNotVaild(Exception):
+
+    message = "The URL is not valid"
