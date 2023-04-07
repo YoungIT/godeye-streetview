@@ -128,5 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Hydra Logs
-settings/logs
+# Images folder
+images/
