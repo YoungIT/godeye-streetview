@@ -2,6 +2,10 @@ overpass:
   query:
     highway : way(around:{radius},{latitude},{longitude})[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential| motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|pedestrian)$"]; out;
 
+redis_config:
+  host: 127.0.0.1
+  port: 6379
+  
 images:
   local_storage : True
 

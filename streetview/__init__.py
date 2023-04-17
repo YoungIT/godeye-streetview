@@ -29,11 +29,13 @@ import overpy
 from loguru import logger
 
 import settings
+import models
 
 from . import (
     google,
     base
 )
+
 
 import utils
 
@@ -197,9 +199,8 @@ class scraper:
 
             raise base.BuildMetadataUrlFail(Error)
 
-    def image_downloader(lat, lon, radius, get_timeline = False):
+    def img_urls(lat, lon, radius, get_timeline = False):
         
-        futures = []
         images_md = scraper.list_pano_id(lat, lon, radius)
 
         for md in images_md:
@@ -216,22 +217,15 @@ class scraper:
 
                         url_lists.append(tile)
 
-            for url in url_lists:
-                pano_date, pano_id, pano_url = url[0], url[1], url[2]
+            _message = Message(
+                pano_id = md.pano_id,
+                img_urls = url_lists , 
+            )
 
-                filename = f'{pano_id}--{pano_date}.jpg'
-                future = scraper.multi_thread.execute_task(scraper.save_image, pano_url, filename)
-                    
-                futures.append(future)
-            break
+            yield _message
 
-        for result in scraper.multi_thread.wait_for_all(futures):
-            logger.debug(f'Download success')
-
-# a= google.metadata._get_panoid_from_coord(48.858623, 2.2926242, 100)
-# logger.debug(a)
-
-scraper.image_downloader(48.858623, 2.2926242, 100)
+# _data = scraper.image_downloader(48.858623, 2.2926242, 100)
+# logger.debug(_data)
 # op = overpass_route(48.858623, 2.2926242, 100)
 
 # google.metadata._get_raw_metadata("test")
