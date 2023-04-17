@@ -6,11 +6,6 @@ from utils import(
     _redis_action
 )
 
-Message(
-    pano_id ="str",
-    img_urls = ['123','234'] , 
-)
-
 from loguru import logger
 
 redis_manager = _redis_action(host=settings.config.redis_config.host, 
@@ -27,12 +22,17 @@ results = streetview.scraper.img_urls(
     _message["lat"], _message["lng"], _message["radius"]
 )
 
-for _message in results:
-    redis_manager.push_to_channel(_channel_name, _message)
+try:
+    while True:
+        message = next(results)
+        redis_manager.push_to_channel(_channel_name, message)
+except StopIteration:
+    logger.warning("No more messages from generator")
 
-pulls = redis_manager.pull_from_channel(_channel_name)
 
-for _message in pulls:
-    logger.debug(_message)
+# pulls = redis_manager.pull_from_channel(_channel_name)
+
+# for _message in pulls:
+#     logger.debug(f"pull message {_message}")
 
 

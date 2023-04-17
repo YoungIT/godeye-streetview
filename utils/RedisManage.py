@@ -1,4 +1,5 @@
 import redis
+import json
 
 class _redis_action:
     def __init__(self, host, port, password=None):
@@ -11,6 +12,7 @@ class _redis_action:
         self.r.publish(channel_name, '__init__')
 
     def push_to_channel(self, channel_name, message):
+        message = json.dumps(message.dict())
         self.r.publish(channel_name, message)
 
     def pull_from_channel(self, channel_name):

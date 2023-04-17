@@ -130,3 +130,6 @@ dmypy.json
 
 # Images folder
 images/
+
+# logging
+logging/

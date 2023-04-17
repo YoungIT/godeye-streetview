@@ -16,12 +16,9 @@ coordinates into panorama ids. The following code retrieves a list of
 the closest panoramas giving you their id and date:
 """
 
-import re, math, os, json, requests, itertools, time, shutil
+import re, os, json, requests, time, shutil, sys
 from datetime import datetime
-from PIL import Image
-from io import BytesIO
 from random import choice
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import overpy
@@ -38,6 +35,8 @@ from . import (
 
 
 import utils
+
+logger.add("logging/streetview.log", backtrace=True, diagnose=True)
 
 overpass_api = overpy.Overpass()
 
@@ -79,7 +78,8 @@ class overpass_route:
                     time.sleep(10)
                     continue
                 break
-                
+
+
         return waypoint
     
 class scraper:
@@ -113,16 +113,21 @@ class scraper:
             pano_id = pano_id[0]
 
         raw_md = google.metadata._get_raw_metadata(pano_id)
+        logger.debug(f"raw_md {raw_md}")
 
         pano_timeline = list() # List for store all PanoID and it's historical Iamges
 
         try:
             lat, lng = raw_md[1][0][5][0][1][0][2], raw_md[1][0][5][0][1][0][3] 
-            street_name = raw_md[1][0][3][2]
+            # street_name = raw_md[1][0][3][2]
             image_size = raw_md[1][0][2][2][0] # obtains highest resolution
             image_avail_res = raw_md[1][0][2][3] # obtains all resolutions available
             raw_image_date = raw_md[1][0][6][-1] # [0] for year - [1] for month
             raw_image_date = scraper._convert_date(f"{raw_image_date[0]}/{raw_image_date[1]}")
+
+            for sublist in raw_md[1][0][3]:
+                if sublist:
+                    street_name = sublist
 
             linked_panos = raw_md[1][0][5][0][3][0]
 
@@ -151,7 +156,7 @@ class scraper:
 
         return metadata
 
-    def list_pano_id(lat, lon, radius):
+    def list_pano_id(lat, lon, radius) -> list:
 
         """_summary_
 
@@ -165,17 +170,21 @@ class scraper:
 
         for lat, lng in op.get_coord_around():
 
-            objects.append({
-                "pano_id" : None,
-                "lat": lat,
-                "lng": lng,
-                "size":None, 
-                "max_zoom":None
-            })
+            try:
 
-            break
+                md = scraper.get_metadata(
+                    pano_id = None,
+                    lat = lat,
+                    lng= lng,
+                    size=None, 
+                    max_zoom=None
+                )
+            except Exception:
+                logger.exception("What?!")
+            else:
+                objects.append(md)
 
-        return [scraper.get_metadata(**obj) for obj in objects]
+        return objects
 
     @utils.retry(base.BuildMetadataUrlFail, delay=5, tries=3)
     def save_image(url, filename, local_storage=settings.config.images.local_storage, storage_path="images/"):
@@ -211,15 +220,13 @@ class scraper:
 
                 for history_pano in md.timeline:
 
-                    logger.debug(history_pano["pano_id"], history_pano["date"])
-
                     for tile in google._build_tile_arr(history_pano["pano_id"], history_pano["date"]):
 
                         url_lists.append(tile)
 
-            _message = Message(
+            _message = models.Message(
                 pano_id = md.pano_id,
-                img_urls = url_lists , 
+                img_urls = url_lists
             )
 
             yield _message

@@ -2,7 +2,5 @@ from typing import List
 from pydantic import BaseModel
 
 class Message(BaseModel):
-    lat: float
-    lng: float
-    img_urls: List[str]
+    img_urls: List
     pano_id: str
