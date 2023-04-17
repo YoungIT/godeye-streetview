@@ -1,23 +1,38 @@
 import streetview
+import settings
+import models
 
-# from loguru import logger
+from utils import(
+    _redis_action
+)
 
-# latitude, longitude = 48.858136, 2.292267
+Message(
+    pano_id ="str",
+    img_urls = ['123','234'] , 
+)
 
-# panoid = streetview.metadata._get_panoid_from_coord(latitude, longitude)
+from loguru import logger
 
-# raw_md = streetview.metadata._get_raw_metadata(panoid)
-# logger.debug(raw_md)
+redis_manager = _redis_action(host=settings.config.redis_config.host, 
+                              port=settings.config.redis_config.port)
 
-# try:
-#     lat, lng = raw_md[1][0][5][0][1][0][2], raw_md[1][0][5][0][1][0][3] 
-#     image_size = raw_md[1][0][2][2][0] # obtains highest resolution
-#     image_avail_res = raw_md[1][0][2][3] # obtains all resolutions available
-#     raw_image_date = raw_md[1][0][6][-1] # [0] for year - [1] for month
-#     raw_image_date = f"{raw_image_date[0]}/{raw_image_date[1]}"
+_message = {
+    "lat":48.858623,
+    "lng":2.2926242,
+    "radius":100
+}
+_channel_name = str(_message["lat"])+"_"+str(_message["lng"])
 
-# except IndexError:
-#     logger.waring("ERROR")
+results = streetview.scraper.img_urls(
+    _message["lat"], _message["lng"], _message["radius"]
+)
 
-# logger.debug(raw_md[0])
-# logger.debug(raw_image_date)
+for _message in results:
+    redis_manager.push_to_channel(_channel_name, _message)
+
+pulls = redis_manager.pull_from_channel(_channel_name)
+
+for _message in pulls:
+    logger.debug(_message)
+
+
