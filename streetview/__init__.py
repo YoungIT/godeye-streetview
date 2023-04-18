@@ -36,6 +36,7 @@ from . import (
 
 import utils
 
+logger.remove()
 logger.add("logging/streetview.log", backtrace=True, diagnose=True)
 
 overpass_api = overpy.Overpass()
@@ -105,6 +106,9 @@ class scraper:
 
         pano_id = kwargs.get("pano_id")
         lat, lng = kwargs.get("lat"), kwargs.get("lng")
+        timeline = kwargs.get("timeline")
+
+
 
         if pano_id == None:
             pano_id = google.metadata._get_panoid_from_coord(lat, lng, 100)
@@ -117,8 +121,9 @@ class scraper:
         pano_timeline = list() # List for store all PanoID and it's historical Iamges
 
         try:
+            street_name = None
+
             lat, lng = raw_md[1][0][5][0][1][0][2], raw_md[1][0][5][0][1][0][3] 
-            # street_name = raw_md[1][0][3][2]
             image_size = raw_md[1][0][2][2][0] # obtains highest resolution
             image_avail_res = raw_md[1][0][2][3] # obtains all resolutions available
             raw_image_date = raw_md[1][0][6][-1] # [0] for year - [1] for month
@@ -128,17 +133,19 @@ class scraper:
                 if sublist:
                     street_name = sublist
 
-            linked_panos = raw_md[1][0][5][0][3][0]
+            if timeline == True and len(raw_md[1][0][5][0][8]) != 0:
 
-            for pano_info in raw_md[1][0][5][0][8]:
-                raw_pano_info = linked_panos[pano_info[0]]
+                linked_panos = raw_md[1][0][5][0][3][0]
 
-                pano_timeline.append({
-                    "pano_id": raw_pano_info[0][1],
-                    "lat": raw_pano_info[2][0][-2],
-                    "lng": raw_pano_info[2][0][-1],
-                    "date": scraper._convert_date(f"{pano_info[1][0]}/{pano_info[1][1]}")
-                })
+                for pano_info in raw_md[1][0][5][0][8]:
+                    raw_pano_info = linked_panos[pano_info[0]]
+
+                    pano_timeline.append({
+                        "pano_id": raw_pano_info[0][1],
+                        "lat": raw_pano_info[2][0][-2],
+                        "lng": raw_pano_info[2][0][-1],
+                        "date": scraper._convert_date(f"{pano_info[1][0]}/{pano_info[1][1]}")
+                    })
         except IndexError:
             raise base.PanoIDInvalid
 
@@ -155,7 +162,7 @@ class scraper:
 
         return metadata
 
-    def list_pano_id(lat, lon, radius) -> list:
+    def list_pano_id(lat, lon, radius, timeline=False) -> list:
 
         """_summary_
 
@@ -176,12 +183,16 @@ class scraper:
                     lat = lat,
                     lng= lng,
                     size=None, 
-                    max_zoom=None
+                    max_zoom=None,
+                    timeline=timeline
                 )
             except Exception:
                 logger.exception("What?!")
             else:
                 objects.append(md)
+
+            # Uncomment for testing
+            # break 
 
         return objects
 
@@ -207,17 +218,15 @@ class scraper:
 
             raise base.BuildMetadataUrlFail(Error)
 
-    def img_urls(lat, lon, radius, get_timeline = False):
+    def img_urls(lat, lng, radius, get_timeline = False):
         
-        images_md = scraper.list_pano_id(lat, lon, radius)
+        images_md = scraper.list_pano_id(lat, lng, radius)
 
         for md in images_md:
 
             pano_id, _date = md.pano_id, md.date[0]
 
             url_lists = google._build_tile_arr(pano_id, _date)
-
-            logger.debug(url_lists)
 
             if get_timeline:
 
@@ -227,22 +236,7 @@ class scraper:
 
                         url_lists.append(tile)
 
-            # _message = models.Message(
-            #     pano_id = pano_id,
-            #     date= _date,
-            #     img_urls = url_lists
-            # )
-
             yield url_lists
-
-# _data = scraper.image_downloader(48.858623, 2.2926242, 100)
-# logger.debug(_data)
-# op = overpass_route(48.858623, 2.2926242, 100)
-
-# google.metadata._get_raw_metadata("test")
-# logger.debug(a)
-
-
 
     
     

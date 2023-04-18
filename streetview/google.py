@@ -203,10 +203,10 @@ def _build_tile_arr(panoid = None, date =None, zoom=4, alternate=False):
         image_url = 'https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=maps_sv.tactile&panoid={}&zoom={}&x={}&y={}'
         tiles = [("%s_%dx%dy" % (panoid, x, y), image_url.format(panoid, zoom, x, y)) for x, y in coord]
 
-    return {
-        "date": date,
+    return [{
+        "date": _date,
         "tiles": tiles,
-    }
+    }]
 
 def api_download(panoid, heading, flat_dir, key, width=640, height=640,
                  fov=120, pitch=0, extension='jpg', year=2017, fname=None):
