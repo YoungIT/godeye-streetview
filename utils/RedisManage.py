@@ -8,11 +8,9 @@ class _redis_action:
         self.password = password
         self.r = redis.Redis(host=host, port=port, password=password)
 
-    def create_channel(self, channel_name):
-        self.r.publish(channel_name, '__init__')
 
     def push_to_channel(self, channel_name, message):
-        message = json.dumps(message.dict())
+        message = json.dumps(message)
         self.r.publish(channel_name, message)
 
     def pull_from_channel(self, channel_name):
