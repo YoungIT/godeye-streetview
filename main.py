@@ -1,37 +1,51 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, BackgroundTasks
 
 import settings
 import streetview
 
 from models import (
-    Message
+    create_channel
 )
 from utils import(
     _redis_action
 )
+
+from loguru import logger
+
 app = FastAPI()
-redis_manager = _redis_action(host=settings.redis_config.host, 
-                              port=settings.redis_config.port)
+redis_manager = _redis_action(host=settings.config.redis_config.host, 
+                              port=settings.config.redis_config.port)
+_channel_name = settings.config.redis_config.channel_name
 
-@app.post("/redis_action/create_channel")
-def initiate_channel(message: Message):
-
-    _message = message.json()
-    _channel_name = str(_message["lat"])+"_"+str(_message["lng"])
-
+def long_task(message: create_channel):
     results = streetview.scraper.img_urls(
-        _message["lat"], _message["lng"], _message["radius"]
+        message.lat, message.lng ,message.radius
     )
 
     try:
         while True:
-            message = next(results)
-            redis_manager.push_to_channel(_channel_name, message)
+            url_list = next(results)
+
+            for message in url_list:
+
+                redis_manager.push_to_channel(_channel_name, message)
+
     except StopIteration:
 
-        return {"Success create channel": _channel_name}
+        logger.success("All messages have been pull out")
+
+@app.post("/redis_action/create_channel")
+async def initiate_channel(message: create_channel, background_tasks: BackgroundTasks):
+
+    background_tasks.add_task(long_task, message)
+
+    return {"Success create channel": _channel_name}
 
 @app.post("/redis_action/delete_channel")
 def delete_channel():
+
+    """
+        Delete Redis Channel by sending a HTTP POST to /redis_action/delete_channel
+    """
     
-    redis_manager.delete_channel()
+    redis_manager.delete_channel(_channel_name)
