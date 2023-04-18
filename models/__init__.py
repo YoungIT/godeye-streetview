@@ -1,3 +1,3 @@
 __all__ = ['Message']
 
-from .messege import Message
+from .api import create_channel
