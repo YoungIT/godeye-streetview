@@ -24,8 +24,14 @@ results = streetview.scraper.img_urls(
 
 try:
     while True:
-        message = next(results)
-        redis_manager.push_to_channel(_channel_name, message)
+        url_list = next(results)
+
+        for message in url_list:
+
+            logger.debug(message)
+            redis_manager.push_to_channel(_channel_name, message)
+
+            break
 except StopIteration:
     logger.warning("No more messages from generator")
 

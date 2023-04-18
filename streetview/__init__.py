@@ -45,13 +45,13 @@ class overpass_route:
     """_summary_
     """
 
-    def __init__ (self, lat, lon, radius) -> None:
+    def __init__(self, lat, lon, radius) -> None:
         self.lat = lat
         self.lon = lon
         self.highway_query = settings.config.overpass.query.highway
         self.radius = radius
 
-    def get_coord_around (self) -> set:
+    def get_coord_around(self) -> set:
 
         """_summary_
         """
@@ -78,7 +78,6 @@ class overpass_route:
                     time.sleep(10)
                     continue
                 break
-
 
         return waypoint
     
@@ -214,7 +213,11 @@ class scraper:
 
         for md in images_md:
 
-            url_lists = google._build_tile_arr(md.pano_id, md.date[0])
+            pano_id, _date = md.pano_id, md.date[0]
+
+            url_lists = google._build_tile_arr(pano_id, _date)
+
+            logger.debug(url_lists)
 
             if get_timeline:
 
@@ -224,12 +227,13 @@ class scraper:
 
                         url_lists.append(tile)
 
-            _message = models.Message(
-                pano_id = md.pano_id,
-                img_urls = url_lists
-            )
+            # _message = models.Message(
+            #     pano_id = pano_id,
+            #     date= _date,
+            #     img_urls = url_lists
+            # )
 
-            yield _message
+            yield url_lists
 
 # _data = scraper.image_downloader(48.858623, 2.2926242, 100)
 # logger.debug(_data)
