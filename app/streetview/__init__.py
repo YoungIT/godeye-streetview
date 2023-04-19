@@ -20,23 +20,20 @@ import re, os, json, requests, time, shutil, sys
 from datetime import datetime
 from random import choice
 
-import numpy as np
 import overpy
 
 from loguru import logger
 
-import settings
-import models
+import app.settings
+import app.models
 
 from . import (
     google,
     base
 )
 
+import app.utils
 
-import utils
-
-logger.remove()
 logger.add("logging/streetview.log", backtrace=True, diagnose=True)
 
 overpass_api = overpy.Overpass()
@@ -49,7 +46,7 @@ class overpass_route:
     def __init__(self, lat, lon, radius) -> None:
         self.lat = lat
         self.lon = lon
-        self.highway_query = settings.config.overpass.query.highway
+        self.highway_query = app.settings.config.overpass.query.highway
         self.radius = radius
 
     def get_coord_around(self) -> set:
@@ -94,7 +91,7 @@ class scraper:
     """
 
     _convert_date = lambda raw_date : datetime.strptime(raw_date, "%Y/%m")
-    multi_thread = base.MultiThread(max_workers=settings.config.worker.max_thread)
+    multi_thread = base.MultiThread(max_workers=app.settings.config.worker.max_thread)
 
     def get_metadata(**kwargs) -> base.MetadataStructure:
 
@@ -107,8 +104,6 @@ class scraper:
         pano_id = kwargs.get("pano_id")
         lat, lng = kwargs.get("lat"), kwargs.get("lng")
         timeline = kwargs.get("timeline")
-
-
 
         if pano_id == None:
             pano_id = google.metadata._get_panoid_from_coord(lat, lng, 100)
@@ -172,7 +167,7 @@ class scraper:
 
         op = overpass_route(lat, lon, radius)
 
-        objects = []
+        # objects = []
 
         for lat, lng in op.get_coord_around():
 
@@ -189,15 +184,17 @@ class scraper:
             except Exception:
                 logger.exception("What?!")
             else:
-                objects.append(md)
+                # objects.append(md)
+
+                yield md
 
             # Uncomment for testing
             # break 
 
-        return objects
+        # return objects
 
-    @utils.retry(base.BuildMetadataUrlFail, delay=5, tries=3)
-    def save_image(url, filename, local_storage=settings.config.images.local_storage, storage_path="images/"):
+    @app.utils.retry(base.BuildMetadataUrlFail, delay=5, tries=3)
+    def save_image(url, filename, local_storage=app.settings.config.images.local_storage, storage_path="images/"):
 
         try:
             response = requests.get(url)
@@ -222,21 +219,19 @@ class scraper:
         
         images_md = scraper.list_pano_id(lat, lng, radius)
 
-        for md in images_md:
+        try:
+            while True:
+                _md = next(images_md)
 
-            pano_id, _date = md.pano_id, md.date[0]
+                pano_id, _date = _md.pano_id, _md.date[0]
+                url_lists = google._build_tile_arr(pano_id, _date)
 
-            url_lists = google._build_tile_arr(pano_id, _date)
+                if get_timeline:
+                    for history_pano in md.timeline:
+                        for tile in google._build_tile_arr(history_pano["pano_id"], history_pano["date"]):
+                            url_lists.append(tile)
 
-            if get_timeline:
+                yield url_lists
 
-                for history_pano in md.timeline:
-
-                    for tile in google._build_tile_arr(history_pano["pano_id"], history_pano["date"]):
-
-                        url_lists.append(tile)
-
-            yield url_lists
-
-    
-    
+        except StopIteration:
+            logger.warning("No more messages from generator")

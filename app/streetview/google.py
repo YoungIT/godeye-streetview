@@ -27,7 +27,7 @@ from . import (
     base
 )
 
-import utils
+import app.utils
 
 class urls:
     chars = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -98,7 +98,7 @@ class metadata:
 
             logger.error(f"Type Error - {Error}")
 
-    @utils.retry(base.BuildMetadataUrlFail, delay=5, tries=3)
+    @app.utils.retry(base.BuildMetadataUrlFail, delay=5, tries=3)
     def _get_raw_metadata(pano_id) -> dict:
         """
         Returns panorama ID metadata.

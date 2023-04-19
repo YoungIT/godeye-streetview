@@ -8,5 +8,5 @@ def load_config (cfg: DictConfig) -> DictConfig:
 
     return cfg 
 
-config_path = OmegaConf.load("settings/config.yaml")
+config_path = OmegaConf.load("app/settings/config.yaml")
 config = load_config(config_path)

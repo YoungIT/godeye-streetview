@@ -1,24 +1,24 @@
 from fastapi import FastAPI, BackgroundTasks
 
-import settings
-import streetview
+import app.settings
+import app.streetview
 
-from models import (
+from app.models import (
     create_channel
 )
-from utils import(
+from app.utils import(
     _redis_action
 )
 
 from loguru import logger
 
-app = FastAPI()
-redis_manager = _redis_action(host=settings.config.redis_config.host, 
-                              port=settings.config.redis_config.port)
-_channel_name = settings.config.redis_config.channel_name
+godeye_api = FastAPI()
+redis_manager = _redis_action(host=app.settings.config.redis_config.host, 
+                              port=app.settings.config.redis_config.port)
+_channel_name = app.settings.config.redis_config.channel_name
 
 def long_task(message: create_channel):
-    results = streetview.scraper.img_urls(
+    results = app.streetview.scraper.img_urls(
         message.lat, message.lng ,message.radius
     )
 
@@ -34,14 +34,14 @@ def long_task(message: create_channel):
 
         logger.success("All messages have been pull out")
 
-@app.post("/redis_action/create_channel")
+@godeye_api.post("/redis_action/create_channel")
 async def initiate_channel(message: create_channel, background_tasks: BackgroundTasks):
 
     background_tasks.add_task(long_task, message)
 
     return {"Success create channel": _channel_name}
 
-@app.post("/redis_action/delete_channel")
+@godeye_api.post("/redis_action/delete_channel")
 def delete_channel():
 
     """
